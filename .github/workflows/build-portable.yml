@@ -1,0 +1,75 @@
+name: Build Portable Windows (Final Optimized)
+
+on:
+  workflow_dispatch: # 手动触发
+
+env:
+  # 解决 Node.js 20 弃用警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 环境变量设置
+  HUSKY: 0
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.91.0 # 使用稳定且兼容的版本
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prebuild Cores
+        run: pnpm run prebuild x86_64-pc-windows-msvc
+
+      - name: Build Portable
+        # 这里使用项目标准的 portable 脚本
+        # 如果你想包含 webview2 环境，可以尝试 pnpm portable-fixed-webview2
+        run: pnpm run portable x86_64-pc-windows-msvc
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+
+      - name: List Files for Debugging
+        # 这一步能帮你确认文件到底在哪，如果再次找不到文件，请看这一步的日志
+        run: |
+          echo "--- Root Directory ---"
+          dir
+          echo "--- Publish Directory ---"
+          if (Test-Path publish) { dir publish }
+          echo "--- Target Directory ---"
+          dir src-tauri/target/x86_64-pc-windows-msvc/release/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clash-Verge-Portable-v24
+          # 覆盖所有可能的输出路径
+          path: |
+            publish/*.zip
+            publish/*.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.zip
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
