@@ -241,8 +241,8 @@ jobs:
             > 首次运行若出现 SmartScreen 警告，点击"更多信息" → "仍要运行"即可。
           files: |
             ${{ env.ZIP_PATH }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # env:
+        #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 16. 同时上传为 Actions Artifact（可选，方便调试）─
       - name: Upload as Actions artifact
