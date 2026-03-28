@@ -1,21 +1,33 @@
-name: Build Portable Windows
+name: Build Portable Windows (Node 24 Optimized)
+
 on:
-  workflow_dispatch: # 允许你手动点击运行
+  workflow_dispatch: # 手动触发
+
+# 全局环境变量：解决 Node.js 20 弃用警告
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     runs-on: windows-latest
+    
+    # 授予必要的权限（如果以后要自动发布到 Release，这一步很重要）
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # 注意：到2026年可能已有v5，可尝试改为v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-
+          node-version: 24 # 直接使用最新的 Node.js 24 LTS 
+          
       - name: Install Pnpm
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -23,19 +35,29 @@ jobs:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
 
+      # 缓存 Rust 依赖，可以显著加快后续构建速度
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
       - name: Install dependencies
         run: pnpm install
 
       - name: Prebuild Cores
         run: pnpm run prebuild
-        # 这一步会下载必要的内核文件
 
       - name: Build Portable
         run: pnpm run portable
-        # 执行项目内置的便携版打包脚本
+        # 提示：如果编译失败，请检查 package.json 里的脚本名称
+        # 部分版本可能是 pnpm tauri build -- --bundle nsis
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Clash-Verge-Portable-EXE
-          path: src-tauri/target/release/bundle/nsis/*.exe # 或者是 .zip，根据输出检查
+          name: Clash-Verge-Portable
+          # 这是一个通配符路径，会自动抓取生成的 exe 或 zip
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.zip
+          if-no-files-found: error
