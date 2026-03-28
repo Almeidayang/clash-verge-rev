@@ -24,17 +24,17 @@ jobs:
       - run: pnpm install
 
       # ⭐ 安装 Tauri 2.x CLI（关键修复）
-      - name: Install Tauri CLI
-        run: pnpm add -g @tauri-apps/cli@latest
+      #- name: Install Tauri CLI
+      #  run: pnpm add -g @tauri-apps/cli@latest
 
       - run: pnpm run prebuild
 
       # ⭐ portable 构建（现在不会报错）
       - name: Build Tauri Portable
-        run: pnpm tauri build --bundles portable
+        run: pnpm build
 
       - name: Fix WebView2
-        run: pnpm portable-fixed-webview2
+        run: pnpm portable
 
       - name: Upload Portable ZIP
         uses: actions/upload-artifact@v4
