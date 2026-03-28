@@ -33,11 +33,9 @@ jobs:
       - run: pnpm build
       - run: pnpm portable-fixed-webview2 ${{ matrix.target }}   # 或 pnpm portable
 
+      # 上传 ZIP artifact（你能在 Actions 页面看到）
       - name: Upload Portable ZIP
-        # uses: actions/upload-artifact@v4
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            name: Clash.Verge_portable_${{ matrix.target }}
-            path: "*.zip"
+          name: Clash.Verge_portable_${{ matrix.target }}
+          path: src-tauri/target/release/bundle/portable/*.zip
