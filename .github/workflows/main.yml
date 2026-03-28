@@ -1,0 +1,41 @@
+name: Build Portable Windows
+on:
+  workflow_dispatch: # 允许你手动点击运行
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Pnpm
+        run: corepack enable
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Prebuild Cores
+        run: pnpm run prebuild
+        # 这一步会下载必要的内核文件
+
+      - name: Build Portable
+        run: pnpm run portable
+        # 执行项目内置的便携版打包脚本
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clash-Verge-Portable-EXE
+          path: src-tauri/target/release/bundle/nsis/*.exe # 或者是 .zip，根据输出检查
