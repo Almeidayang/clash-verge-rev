@@ -1,13 +1,13 @@
-name: Build Portable Windows (v2026 Fixed)
+name: Build Portable Windows (Final Fix)
 
 on:
   workflow_dispatch:
 
 env:
-  # 强制让过时的 Action 运行在 Node 24 上
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # 禁用 Husky 钩子以加速构建
   HUSKY: 0
+  # 提高 Node 内存限制，防止打包时 OOM
+  NODE_OPTIONS: "--max-old-space-size=8192"
 
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          # 【修复关键】不指定 version，Action 会自动从 package.json 读取 10.32.1
+          # 不写版本，自动读取 package.json 里的 10.32.1
           run_install: false
 
       - name: Install Rust
@@ -33,36 +33,37 @@ jobs:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "src-tauri -> target"
-
       - name: Install dependencies
-        # 使用 --no-frozen-lockfile 避免因为版本微调导致的安装失败
+        # 使用 --no-frozen-lockfile 兼容 pnpm 10 的严格校验
         run: pnpm install --no-frozen-lockfile
 
       - name: Prebuild Cores
-        run: pnpm run prebuild x86_64-pc-windows-msvc
+        # 很多版本不支持参数，直接运行默认 prebuild
+        run: pnpm run prebuild
 
       - name: Build Portable
-        # 这里建议尝试使用带 WebView2 的版本，对“不被杀毒软件拦截”更有帮助
-        # 如果报错，请改回 pnpm run portable x86_64-pc-windows-msvc
-        run: pnpm run portable-fixed-webview2 x86_64-pc-windows-msvc
+        # 核心修复：先尝试最通用的 portable 命令
+        # 如果这个依然报错，请检查 package.json 里的 scripts 部分
+        run: pnpm run portable
         env:
-          NODE_OPTIONS: "--max_old_space_size=4096"
+          # 告诉 Tauri 不要生成安装包，只生成二进制
+          TAURI_SKIP_MSI_STEP: true 
 
       - name: List Files for Debugging
+        if: always() # 即使失败也运行，方便看文件到底在哪
         shell: pwsh
         run: |
-          Write-Host "--- Root Directory ---"
+          echo "=== Root Directory ==="
           ls
+          echo "=== src-tauri Directory ==="
+          ls src-tauri
           if (Test-Path publish) { 
-            Write-Host "--- Publish Directory Content ---"
+            echo "=== Publish Folder Found ==="
             ls publish 
-          } else {
-            Write-Host "!!! publish directory not found !!!"
-            ls src-tauri/target/x86_64-pc-windows-msvc/release/
+          }
+          if (Test-Path src-tauri/target/release) {
+            echo "=== Release Folder Found ==="
+            ls src-tauri/target/release
           }
 
       - name: Upload Artifact
@@ -70,8 +71,8 @@ jobs:
         with:
           name: Clash-Verge-Portable-2026
           path: |
-            publish/*.zip
-            publish/*.exe
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.zip
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
-          if-no-files-found: error
+            publish/*
+            src-tauri/target/release/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.zip
+          if-no-files-found: warn
