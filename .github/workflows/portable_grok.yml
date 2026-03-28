@@ -31,10 +31,11 @@ jobs:
       - run: pnpm install
       - run: pnpm run prebuild
        # 构建 Tauri（必须启用 portable）
-      - run: pnpm build
-      
-      # 生成 portable ZIP（依赖 portable bundle）
-      - run: pnpm portable-fixed-webview2 ${{ matrix.target }}   # 或 pnpm portable
+      - name: Build Tauri Portable
+        run: pnpm tauri build --bundles portable
+
+      - name: Fix WebView2
+        run: pnpm portable-fixed-webview2 ${{ matrix.target }}
 
       # 上传 ZIP artifact（你能在 Actions 页面看到）
       - name: Upload Portable ZIP
