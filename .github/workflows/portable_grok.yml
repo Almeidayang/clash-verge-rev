@@ -1,45 +1,43 @@
-# .github/workflows/portable.yml（新建）
 name: Build Portable
 
-env:
- TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }} 
- TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_PRIVATE_KEY_PASSWORD }}
-
 on:
-  workflow_dispatch:      # 手动触发
+  workflow_dispatch:
   push:
-    tags: ['v*']         # 或者 tag 触发
+    tags: ['v*']
 
 jobs:
   build-portable:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        target: [x86_64-pc-windows-msvc] # target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
+
       - uses: pnpm/action-setup@v4
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - run: pnpm install
+
+      # ⭐ 安装 Tauri 2.x CLI（关键修复）
+      - name: Install Tauri CLI
+        run: pnpm add -g @tauri-apps/cli@latest
+
       - run: pnpm run prebuild
-       # 构建 Tauri（必须启用 portable）
+
+      # ⭐ portable 构建（现在不会报错）
       - name: Build Tauri Portable
         run: pnpm tauri build --bundles portable
 
       - name: Fix WebView2
-        run: pnpm portable-fixed-webview2 ${{ matrix.target }}
+        run: pnpm portable-fixed-webview2
 
-      # 上传 ZIP artifact（你能在 Actions 页面看到）
       - name: Upload Portable ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: Clash.Verge_portable_${{ matrix.target }}
+          name: Clash.Verge_portable
           path: src-tauri/target/release/bundle/portable/*.zip
