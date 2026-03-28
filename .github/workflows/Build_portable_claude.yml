@@ -40,6 +40,7 @@ permissions:
 env:
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
 jobs:
   # ──────────────────────────────────────────────────────────
@@ -68,8 +69,8 @@ jobs:
       # ── 2. 安装 pnpm ─────────────────────────────────────
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: latest
+        # with:
+          # version: latest
 
       # ── 3. 安装 Node.js 22（与官方一致）────────────────
       - name: Setup Node.js
