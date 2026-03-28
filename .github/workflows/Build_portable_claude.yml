@@ -159,7 +159,9 @@ jobs:
       #    有 PFX_BASE64 / PFX_PASSWORD secret 时才执行
       #    签名后 SmartScreen 会逐步积累信誉；EV 证书可立即消除告警
       - name: Sign executables (optional)
-        if: secrets.PFX_BASE64 != ''
+        if: env.PFX_BASE64 != ''
+        env:
+          PFX_BASE64: ${{ secrets.PFX_BASE64 }}   # 先声明 env
         run: |
           # 解码证书
           $pfxBytes = [Convert]::FromBase64String("$env:PFX_BASE64")
