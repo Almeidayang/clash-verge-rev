@@ -55,7 +55,8 @@ jobs:
         include:
           - target: x86_64-pc-windows-msvc
             arch_label: x64
-
+          - target: aarch64-pc-windows-msvc
+            arch_label: arm64
 
     steps:
       # ── 1. 检出代码 ──────────────────────────────────────
@@ -158,10 +159,12 @@ jobs:
       # ── 12. （可选）对 exe 进行代码签名 ─────────────────
       #    有 PFX_BASE64 / PFX_PASSWORD secret 时才执行
       #    签名后 SmartScreen 会逐步积累信誉；EV 证书可立即消除告警
+      #    注意：if 条件里无法直接引用 secrets，改用 env 变量判断
       - name: Sign executables (optional)
         if: env.PFX_BASE64 != ''
         env:
-          PFX_BASE64: ${{ secrets.PFX_BASE64 }}   # 先声明 env
+          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
         run: |
           # 解码证书
           $pfxBytes = [Convert]::FromBase64String("$env:PFX_BASE64")
@@ -182,9 +185,6 @@ jobs:
 
           Remove-Item $pfxPath -Force
         shell: pwsh
-        env:
-          PFX_BASE64: ${{ secrets.PFX_BASE64 }}
-          PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
 
       # ── 13. 打包 Portable ZIP ────────────────────────────
       #    官方 scripts/portable.mjs 做的事：
@@ -241,8 +241,8 @@ jobs:
             > 首次运行若出现 SmartScreen 警告，点击"更多信息" → "仍要运行"即可。
           files: |
             ${{ env.ZIP_PATH }}
-        # env:
-        #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 16. 同时上传为 Actions Artifact（可选，方便调试）─
       - name: Upload as Actions artifact
